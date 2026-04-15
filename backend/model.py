@@ -8,8 +8,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+import sys
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
+sys.path.append(BASE_DIR)
 
 
 # ===== 1. wczytanie =====
@@ -122,13 +123,13 @@ def print_metrics(name, y_true, y_pred):
 
 # policz korelacje między cechami
 corr_matrix = df[features].corr()
-
+'''
 # wyświetl w formie mapy cieplnej
 plt.figure(figsize=(10,8))
 sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap="coolwarm")
 plt.title("Macierz korelacji cech")
 #plt.show()
-
+'''
 '''
 rok:
 NORMAL TRAIN (Ridge)
