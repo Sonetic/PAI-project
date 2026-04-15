@@ -14,7 +14,7 @@ sys.path.append(BASE_DIR)
 
 
 # ===== 1. wczytanie =====
-df = pd.read_csv("transactions_ready.csv")
+df = pd.read_csv(os.path.join(BASE_DIR, "transactions_ready.csv"))
 df["inv_powierzchnia"] = 1/df["powierzchnia_uzyt"]
 df["relacja_ulica"] = df["srednia_budynek"] / df["srednia_cena_dzielnica"]
 df["pokoje_na_m2"] = df["liczba_pokoi"] / df["powierzchnia_uzyt"]

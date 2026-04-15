@@ -11,7 +11,7 @@ import json
 import ast
 
 
-with open("metro_stacje.geojson") as f:
+with open(os.path.join(BASE_DIR, "metro_stacje.geojson")) as f:
     metro_data = json.load(f)
 
 metro_coords = np.array([
@@ -20,7 +20,7 @@ metro_coords = np.array([
 ])
 
 # wczytanie danych
-df = pd.read_csv("transactions_ready.csv")  # musi zawierać kolumnę 'coordinates'
+df = pd.read_csv(os.path.join(BASE_DIR, "transactions_ready.csv"))  # musi zawierać kolumnę 'coordinates'
 
 # utwórz kolumnę numeryczną dla funkcji budynku
 df["przewazajacaFunkcjaBudynku_num"] = df["przewazajacaFunkcjaBudynku"].apply(
