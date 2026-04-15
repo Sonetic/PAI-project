@@ -1,7 +1,11 @@
 import pandas as pd
 import numpy as np
 import requests
-from aaplatnoscirendertest.backend.model import model_normal, model_out
+import sys
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
+from model import model_normal, model_out
 import re
 import json
 import ast
