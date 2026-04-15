@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+import os
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -8,9 +8,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 
 # ===== 1. wczytanie =====
