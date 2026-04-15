@@ -12,8 +12,11 @@ sys.path.append(BASE_DIR)
 from predykcja import predict_price
 
 app = Flask(__name__)
-CORS(app)
-
+CORS(
+    app,
+    resources={r"/*": {"origins": "https://wwacenyrenderplatnoscistatic.onrender.com"}},
+    supports_credentials=True
+)
 # =========================
 # STRIPE CONFIG (RENDER SAFE)
 # =========================
