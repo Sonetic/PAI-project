@@ -12,20 +12,18 @@ app = Flask(__name__)
 CORS(app)
 
 # =========================
-# STRIPE CONFIG
+# STRIPE CONFIG (RENDER SAFE)
 # =========================
-stripe.api_key = "sk_test_51TMPjfB8svdwFzvVPv3WdYKNoyR2gs89fhA3f9opKyiiiiDDBIbGcN3EGqHE9QnOFBxp9LX2TTKQrZnevFiXBiPb00vnnPLAq3"
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
 
-PRICE = 201  # 50 zł
+PRICE = 201  # 2.01 PLN / 50 PLN zależnie jak ustawisz
 
-# =========================
-# CSV (opcjonalnie)
-# =========================
-df = pd.read_csv("unique_streets.csv")
-
+# pamięć (na start MVP)
+paid_sessions = set()
 
 # =========================
-# CREATE STRIPE SESSION
+# CREATE CHECKOUT SESSION
 # =========================
 @app.route("/create-checkout-session", methods=["POST"])
 def create_checkout_session():
@@ -46,8 +44,11 @@ def create_checkout_session():
                 "quantity": 1,
             }
         ],
-        success_url="http://127.0.0.1:5500/success.html?session_id={CHECKOUT_SESSION_ID}",
-        cancel_url="http://127.0.0.1:5500/predykcja.html",
+
+        # 🔥 TWOJE FRONTEND URL (RENDER)
+        success_url="https://wwacenyrenderplatnoscistatic.onrender.com/success.html?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url="https://wwacenyrenderplatnoscistatic.onrender.com/predykcja.html",
+
         metadata={
             "ulica": data.get("ulica"),
             "numer": data.get("numer"),
@@ -58,30 +59,46 @@ def create_checkout_session():
 
 
 # =========================
-# PREDYKCJA (BLOCKED BY STRIPE)
+# WEBHOOK STRIPE (KLUCZOWE)
+# =========================
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    payload = request.data
+    sig_header = request.headers.get("Stripe-Signature")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload,
+            sig_header,
+            WEBHOOK_SECRET
+        )
+    except Exception as e:
+        return str(e), 400
+
+    # 🔥 PAYMENT CONFIRMED
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        paid_sessions.add(session["id"])
+        print("PAYMENT OK:", session["id"])
+
+    return "ok", 200
+
+
+# =========================
+# PREDICTION (PROTECTED)
 # =========================
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.get_json()
-
     session_id = data.get("session_id")
 
     if not session_id:
-        return jsonify({"error": "Brak płatności"}), 403
+        return jsonify({"error": "Brak session_id"}), 403
 
-    # sprawdzenie Stripe
-    try:
-        session = stripe.checkout.Session.retrieve(session_id)
-    except Exception:
-        return jsonify({"error": "Nieprawidłowa sesja"}), 403
-
-    if session.payment_status != "paid":
+    # 🔥 webhook-based check
+    if session_id not in paid_sessions:
         return jsonify({"error": "Nieopłacone"}), 403
 
-
-    # =========================
-    # TWOJA LOGIKA ML
-    # =========================
     result = predict_price(
         data["ulica"],
         data["numer"],
@@ -90,9 +107,6 @@ def predict():
         data["liczba_pokoi"]
     )
 
-    # =========================
-    # CSV GENERATION
-    # =========================
     pred_csv = io.StringIO()
     pd.DataFrame([result[0]]).to_csv(pred_csv, index=False)
 
@@ -110,9 +124,6 @@ def predict():
         budynek_csv = io.StringIO()
         result[3].to_csv(budynek_csv, index=False)
 
-    # =========================
-    # ZIP IN MEMORY
-    # =========================
     zip_buffer = io.BytesIO()
 
     with zipfile.ZipFile(zip_buffer, "w") as zf:
@@ -136,8 +147,8 @@ def predict():
 
 
 # =========================
-# START SERVER
+# START (RENDER)
 # =========================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
