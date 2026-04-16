@@ -4,6 +4,8 @@ import requests
 import sys
 import os
 import time
+from opencage.geocoder import OpenCageGeocode
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 from model import model_normal, model_out
@@ -35,38 +37,22 @@ df['numer'] = df['numer'].str.replace(",", "-")
 import requests
 import time
 
-def get_coords(adres, retries=3):
-    url = "https://nominatim.openstreetmap.org/search"
-    params = {"q": adres + ", Warszawa", "format": "json"}
-    headers = {"User-Agent": "my-app"}
 
-    for i in range(retries):
-        try:
-            res = requests.get(url, params=params, headers=headers, timeout=5)
+GEOCODER = OpenCageGeocode("f754d68b43ee405887939e2ab97c1341")
 
-            print("STATUS:", res.status_code)
-            print("URL:", res.url)
-            print("BODY:", res.text[:200])
+def get_coords(ulica, numer):
+    query = f"{ulica} {numer}, Warszawa, Polska"
 
-            if res.status_code != 200:
-                time.sleep(1)
-                continue
+    try:
+        result = GEOCODER.geocode(query)
 
-            try:
-                data = res.json()
-            except Exception:
-                print("BRAK JSON")
-                time.sleep(1)
-                continue
+        if result and len(result):
+            lat = result[0]["geometry"]["lat"]
+            lng = result[0]["geometry"]["lng"]
+            return (lat, lng)
 
-            if isinstance(data, list) and len(data) > 0:
-                return float(data[0]["lat"]), float(data[0]["lon"])
-
-            return None
-
-        except Exception as e:
-            print("ERROR:", e)
-            time.sleep(1)
+    except Exception as e:
+        print("GEOCODING ERROR:", e)
 
     return None
 
