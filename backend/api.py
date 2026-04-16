@@ -5,8 +5,10 @@ import io
 import zipfile
 import stripe
 import os
-
+import sys
 from supabase import create_client
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
 from predykcja import predict_price
 
 # =========================
