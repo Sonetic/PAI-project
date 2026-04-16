@@ -32,28 +32,43 @@ df['numer'] = df['numer'].str.replace(",", "-")
 
 
 # funkcja do pobrania współrzędnych przez OSM
-def get_coords(adres):
+import requests
+import time
+
+def get_coords(adres, retries=3):
     url = "https://nominatim.openstreetmap.org/search"
     params = {"q": adres + ", Warszawa", "format": "json"}
     headers = {"User-Agent": "my-app"}
 
-    for i in range(3):  # retry 3 razy
+    for i in range(retries):
         try:
             res = requests.get(url, params=params, headers=headers, timeout=5)
 
+            print("STATUS:", res.status_code)
+            print("URL:", res.url)
+            print("BODY:", res.text[:200])
+
             if res.status_code != 200:
-                raise Exception(f"HTTP {res.status_code}")
+                time.sleep(1)
+                continue
 
-            data = res.json()
+            try:
+                data = res.json()
+            except Exception:
+                print("BRAK JSON")
+                time.sleep(1)
+                continue
 
-            if len(data) > 0:
+            if isinstance(data, list) and len(data) > 0:
                 return float(data[0]["lat"]), float(data[0]["lon"])
 
-        except Exception:
-            time.sleep(1 * (2 ** i))  # 1s, 2s, 4s
+            return None
+
+        except Exception as e:
+            print("ERROR:", e)
+            time.sleep(1)
 
     return None
-
 
 
 def numer_to_float(numer):
