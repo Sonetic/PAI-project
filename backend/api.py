@@ -5,31 +5,35 @@ import io
 import zipfile
 import stripe
 import os
-import sys
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
 
+from supabase import create_client
 from predykcja import predict_price
 
+# =========================
+# APP
+# =========================
 app = Flask(__name__)
+
 CORS(
     app,
-    resources={r"/*": {"origins": "https://wwacenyrenderplatnoscistatic.onrender.com"}},
-    supports_credentials=True
+    resources={r"/*": {"origins": "https://wwacenyrenderplatnoscistatic.onrender.com"}}
 )
-# =========================
-# STRIPE CONFIG (RENDER SAFE)
-# =========================
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
-WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
-
-PRICE = 201  # 2.01 PLN / 50 PLN zależnie jak ustawisz
-
-# pamięć (na start MVP)
-paid_sessions = set()
 
 # =========================
-# CREATE CHECKOUT SESSION
+# ENV
+# =========================
+stripe.api_key = 'sk_test_51TMPjfB8svdwFzvVPv3WdYKNoyR2gs89fhA3f9opKyiiiiDDBIbGcN3EGqHE9QnOFBxp9LX2TTKQrZnevFiXBiPb00vnnPLAq3'
+WEBHOOK_SECRET = 'whsec_xnkZ9Am2k3rpog9aZs0MGpFogUQdBCeg'
+
+SUPABASE_URL = 'https://lrkpesayybufuabcnqzb.supabase.co'
+SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxya3Blc2F5eWJ1ZnVhYmNucXpiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI5MjI1MSwiZXhwIjoyMDkxODY4MjUxfQ.FpVM3L1ZmQrQZGjh1a5Ui6NpKKxdaM2WBVx-mZMOvVg'
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+PRICE = 201  # grosze
+
+# =========================
+# CREATE PAYMENT SESSION
 # =========================
 @app.route("/create-checkout-session", methods=["POST"])
 def create_checkout_session():
@@ -50,11 +54,8 @@ def create_checkout_session():
                 "quantity": 1,
             }
         ],
-
-        # 🔥 TWOJE FRONTEND URL (RENDER)
         success_url="https://wwacenyrenderplatnoscistatic.onrender.com/success.html?session_id={CHECKOUT_SESSION_ID}",
         cancel_url="https://wwacenyrenderplatnoscistatic.onrender.com/predykcja.html",
-
         metadata={
             "ulica": data.get("ulica"),
             "numer": data.get("numer"),
@@ -65,7 +66,7 @@ def create_checkout_session():
 
 
 # =========================
-# WEBHOOK STRIPE (KLUCZOWE)
+# STRIPE WEBHOOK
 # =========================
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -81,11 +82,18 @@ def webhook():
     except Exception as e:
         return str(e), 400
 
-    # 🔥 PAYMENT CONFIRMED
+    # PAYMENT SUCCESS
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
-        paid_sessions.add(session["id"])
-        print("PAYMENT OK:", session["id"])
+        session_id = session["id"]
+
+        supabase.table("payments").insert({
+            "id": session_id,
+            "paid": True,
+            "used": False
+        }).execute()
+
+        print("PAYMENT SAVED:", session_id)
 
     return "ok", 200
 
@@ -101,10 +109,28 @@ def predict():
     if not session_id:
         return jsonify({"error": "Brak session_id"}), 403
 
-    # 🔥 webhook-based check
-    if session_id not in paid_sessions:
+    # CHECK SUPABASE
+    res = supabase.table("payments").select("*").eq("id", session_id).execute()
+
+    if len(res.data) == 0:
+        return jsonify({"error": "Brak płatności"}), 403
+
+    payment = res.data[0]
+
+    if not payment["paid"]:
         return jsonify({"error": "Nieopłacone"}), 403
 
+    if payment["used"]:
+        return jsonify({"error": "Już wykorzystane"}), 403
+
+    # MARK AS USED (1-time access)
+    supabase.table("payments").update({
+        "used": True
+    }).eq("id", session_id).execute()
+
+    # =========================
+    # ML LOGIC
+    # =========================
     result = predict_price(
         data["ulica"],
         data["numer"],
@@ -113,6 +139,9 @@ def predict():
         data["liczba_pokoi"]
     )
 
+    # =========================
+    # CSV OUTPUT
+    # =========================
     pred_csv = io.StringIO()
     pd.DataFrame([result[0]]).to_csv(pred_csv, index=False)
 
@@ -130,6 +159,9 @@ def predict():
         budynek_csv = io.StringIO()
         result[3].to_csv(budynek_csv, index=False)
 
+    # =========================
+    # ZIP RESPONSE
+    # =========================
     zip_buffer = io.BytesIO()
 
     with zipfile.ZipFile(zip_buffer, "w") as zf:
@@ -153,7 +185,7 @@ def predict():
 
 
 # =========================
-# START (RENDER)
+# START
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
