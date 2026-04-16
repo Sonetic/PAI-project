@@ -268,7 +268,7 @@ def predict_price(ulica, numer, powierzchnia, piętro, liczba_pokoi):
             df_danedowyrdukuulica["powierzchnia użytkowa"] = df_danedowyrdukuulica["powierzchnia użytkowa"].round().astype(int).apply(lambda x: f"{x:,}".replace(",", " ") + " m2")
 
 
-            coords = get_coords(f"{ulica} {numer}")
+            coords = get_coords(ulica, numer)
             nearest_transactions = find_nearest_transactions_by_coords(coords[0], coords[1])
 
 
@@ -397,7 +397,7 @@ def predict_price(ulica, numer, powierzchnia, piętro, liczba_pokoi):
             df_danedowydrukuulica["powierzchnia użytkowa"] = df_danedowydrukuulica["powierzchnia użytkowa"].round().astype(int).apply(lambda x: f"{x:,}".replace(",", " ") + " m2")
 
 
-            coords = get_coords(f"{ulica} {numer}")
+            coords = get_coords(ulica, numer)
             if coords is not None:
                 lat, lon = coords
 
@@ -521,7 +521,7 @@ def predict_price(ulica, numer, powierzchnia, piętro, liczba_pokoi):
 
     else:
         print("Ulica nieznana")
-        coords = get_coords(f"{ulica} {numer}")
+        coords = get_coords(ulica, numer)
         if coords is not None:
             lat, lon = coords
 
