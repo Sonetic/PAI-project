@@ -3,6 +3,7 @@ import numpy as np
 import requests
 import sys
 import os
+import time
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 from model import model_normal, model_out
@@ -35,9 +36,22 @@ def get_coords(adres):
     url = "https://nominatim.openstreetmap.org/search"
     params = {"q": adres + ", Warszawa", "format": "json"}
     headers = {"User-Agent": "my-app"}
-    res = requests.get(url, params=params, headers=headers).json()
-    if len(res) > 0:
-        return float(res[0]["lat"]), float(res[0]["lon"])
+
+    for i in range(3):  # retry 3 razy
+        try:
+            res = requests.get(url, params=params, headers=headers, timeout=5)
+
+            if res.status_code != 200:
+                raise Exception(f"HTTP {res.status_code}")
+
+            data = res.json()
+
+            if len(data) > 0:
+                return float(data[0]["lat"]), float(data[0]["lon"])
+
+        except Exception:
+            time.sleep(1 * (2 ** i))  # 1s, 2s, 4s
+
     return None
 
 
