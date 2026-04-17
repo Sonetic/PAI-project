@@ -11,6 +11,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 from predykcja import predict_price
 from datetime import datetime, timedelta, timezone
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+
 # =========================
 # APP
 # =========================
@@ -103,7 +107,11 @@ def webhook():
 # =========================
 # PREDICTION (PROTECTED)
 # =========================
+
+limiter = Limiter(get_remote_address, app=app)
+
 @app.route("/predict", methods=["POST"])
+@limiter.limit("5 per minute")
 def predict():
     data = request.get_json()
     session_id = data.get("session_id")

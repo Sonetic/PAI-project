@@ -8,7 +8,7 @@ scikit-learn
 opencage
 flask-core==2.9.0
 Flask-Cors==4.0.1
-
+Flask-Limiter
 
 gunicorn==21.2.0
 
