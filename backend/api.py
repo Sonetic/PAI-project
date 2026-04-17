@@ -127,7 +127,7 @@ def predict():
     if not payment["used"]:
         supabase.table("payments").update({
             "used": True,
-            "expires_at": (now + timedelta(minutes=1)).isoformat()
+            "expires_at": (now + timedelta(hours=1)).isoformat()
         }).eq("id", session_id).execute()
     else:
         expires_at = payment.get("expires_at")
