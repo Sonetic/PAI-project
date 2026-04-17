@@ -135,7 +135,12 @@ def predict():
         if not expires_at:
             return jsonify({"error": "Błąd danych"}), 500
 
-        if now > datetime.fromisoformat(expires_at):
+        expires_at_dt = datetime.fromisoformat(expires_at)
+
+        if expires_at_dt.tzinfo is None:
+            expires_at_dt = expires_at_dt.replace(tzinfo=timezone.utc)
+
+        if now > expires_at_dt:
             return jsonify({"error": "Dostęp wygasł"}), 403
 
     # =========================
