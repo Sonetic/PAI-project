@@ -10,7 +10,7 @@ from supabase import create_client
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 from predykcja import predict_price
-
+from datetime import datetime, timedelta, timezone
 # =========================
 # APP
 # =========================
@@ -122,13 +122,21 @@ def predict():
     if not payment["paid"]:
         return jsonify({"error": "Nieopłacone"}), 403
 
-    if payment["used"]:
-        return jsonify({"error": "Już wykorzystane"}), 403
+    now = datetime.now(timezone.utc)
 
-    # MARK AS USED (1-time access)
-    supabase.table("payments").update({
-        "used": True
-    }).eq("id", session_id).execute()
+    if not payment["used"]:
+        supabase.table("payments").update({
+            "used": True,
+            "expires_at": (now + timedelta(minutes=1)).isoformat()
+        }).eq("id", session_id).execute()
+    else:
+        expires_at = payment.get("expires_at")
+
+        if not expires_at:
+            return jsonify({"error": "Błąd danych"}), 500
+
+        if now > datetime.fromisoformat(expires_at):
+            return jsonify({"error": "Dostęp wygasł"}), 403
 
     # =========================
     # ML LOGIC
