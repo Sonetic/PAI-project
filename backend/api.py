@@ -93,7 +93,7 @@ def webhook():
         session = event["data"]["object"]
         session_id = session["id"]
 
-        supabase.table("payments").insert({
+        supabase.table("payments").upsert({
             "id": session_id,
             "paid": True,
             "used": False
