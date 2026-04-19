@@ -28,15 +28,15 @@ CORS(
 # =========================
 # ENV
 # =========================
-stripe.api_key = 'sk_test_51TMPjfB8svdwFzvVPv3WdYKNoyR2gs89fhA3f9opKyiiiiDDBIbGcN3EGqHE9QnOFBxp9LX2TTKQrZnevFiXBiPb00vnnPLAq3'
-WEBHOOK_SECRET = 'whsec_xnkZ9Am2k3rpog9aZs0MGpFogUQdBCeg'
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
-SUPABASE_URL = 'https://lrkpesayybufuabcnqzb.supabase.co'
-SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxya3Blc2F5eWJ1ZnVhYmNucXpiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI5MjI1MSwiZXhwIjoyMDkxODY4MjUxfQ.FpVM3L1ZmQrQZGjh1a5Ui6NpKKxdaM2WBVx-mZMOvVg'
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-PRICE = 201  # grosze
+PRICE = 200  # grosze
 
 # =========================
 # CREATE PAYMENT SESSION
