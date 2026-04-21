@@ -8,13 +8,13 @@ body {
 .hero {
     background: linear-gradient(to right, #4facfe, #00f2fe);
     color: white;
-    padding: 65px 20px;
+    padding: 60px 20px;
 }
 
 .hero_violet {
     background: linear-gradient(to right, #c471f5, #7f00ff);
     color: white;
-    padding: 70px 20px;
+    padding: 60px 20px;
 }
 
 .hero h1 {
