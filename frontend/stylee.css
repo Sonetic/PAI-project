@@ -8,7 +8,7 @@ body {
 .hero {
     background: linear-gradient(to right, #4facfe, #00f2fe);
     color: white;
-    padding: 100px 20px;
+    padding: 70px 20px;
 }
 
 .hero_violet {
