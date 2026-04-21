@@ -129,6 +129,28 @@ tr:hover {
 
 
 
+.main-btn {
+    display: inline-block; /* Dzięki temu przycisk dopasowuje się do tekstu */
+    padding: 8px 16px;     /* Wewnętrzne marginesy tworzą kształt prostokąta */
+    background: linear-gradient(135deg, #4facfe, #00c6ff);
+    color: white;
+    text-decoration: none; /* Usuwa podkreślenie linku */
+    border-radius: 6px;    /* Delikatne zaokrąglenie rogów */
+    font-weight: 500;
+    font-size: 14px;
+    transition: 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.main-btn:hover {
+    filter: brightness(1.1); /* Delikatne rozjaśnienie po najechaniu */
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,150,255,0.2);
+}
+
+
+
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
