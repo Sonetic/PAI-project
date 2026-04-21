@@ -49,7 +49,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 20px;
-    padding: 25px;
+    padding: 15px;
     flex-wrap: wrap; /* 🔥 ważne */
     align-items: flex-start;
 }
