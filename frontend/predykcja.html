@@ -53,10 +53,15 @@ const datalist = document.getElementById("street-list");
 
 input.addEventListener("input", () => {
     datalist.innerHTML = "";
-    const val = input.value.toLowerCase();
+
+    const fullVal = input.value.toLowerCase().trim();
+    const val = fullVal.split(/\s+/).pop();
+
+    if (!val) return;
 
     streets.forEach(s => {
-        const words = s.toLowerCase().split(" ");
+        const words = s.toLowerCase().split(/\s+/);
+
         if (words.some(w => w.startsWith(val))) {
             const opt = document.createElement("option");
             opt.value = s;
@@ -64,7 +69,6 @@ input.addEventListener("input", () => {
         }
     });
 });
-
 async function payAndRedirect() {
     const data = {
         ulica: document.getElementById("Street").value,
