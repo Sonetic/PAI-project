@@ -62,8 +62,8 @@ def create_checkout_session():
                 "quantity": 1,
             }
         ],
-        success_url="https://wwacenyrenderplatnoscistatic.onrender.com/success.html?session_id={CHECKOUT_SESSION_ID}",
-        cancel_url="https://wwacenyrenderplatnoscistatic.onrender.com/predykcja.html",
+        success_url="https://www.warszawskieceny.pl/success.html?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url="https://www.warszawskieceny.pl/predykcja.html",
         metadata={
             "ulica": data.get("ulica"),
             "numer": data.get("numer"),
