@@ -23,8 +23,7 @@ app = Flask(__name__)
 CORS(
     app,
     resources={r"/*": {"origins": [
-            "https://wwacenyrenderplatnoscistatic.onrender.com",
-            "https://www.warszawskieceny.pl"
+            "https://wwacenyrenderplatnoscistatic.onrender.com"
         ]}}
 )
 
