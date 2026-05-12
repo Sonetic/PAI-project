@@ -213,6 +213,16 @@ body {
         font-size: 0.95rem;
     }
 
+
+    .hero_violet {
+    padding: 50px 15px;
+}
+
+.hero_violet p {
+    font-size: 1rem;
+    padding: 15px 0;
+}
+
     /* BUTTON */
     .main-btn {
         display: block;
@@ -273,6 +283,14 @@ body {
     .hero p {
         font-size: 1.1rem;
     }
+    .hero_violet {
+    padding: 50px 15px;
+}
+
+.hero_violet p {
+    font-size: 1rem;
+    padding: 15px 0;
+}
 
     /* FEATURES */
     .features {
