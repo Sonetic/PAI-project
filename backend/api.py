@@ -4,16 +4,13 @@ import pandas as pd
 import io
 import zipfile
 import stripe
+from flask_sqlalchemy import SQLAlchemy
 import os
 import sys
-from supabase import create_client
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
 from predykcja import predict_price
 from datetime import datetime, timedelta, timezone
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-
 
 # =========================
 # APP
@@ -23,8 +20,8 @@ app = Flask(__name__)
 CORS(
     app,
     resources={r"/*": {"origins": [
-            "https://www.warszawskieceny.pl"
-        ]}}
+        "http://localhost:8080"
+    ]}}
 )
 
 # =========================
@@ -33,12 +30,33 @@ CORS(
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres:postgres@localhost:5432/warszawskieceny"
+)
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app)
 
 PRICE = 200  # grosze
+
+# =========================
+# MODEL
+# =========================
+class Payment(db.Model):
+    __tablename__ = "payments"
+
+    id = db.Column(db.String, primary_key=True)
+    paid = db.Column(db.Boolean, default=False)
+    used = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=True)
+
+
+with app.app_context():
+    db.create_all()
 
 # =========================
 # CREATE PAYMENT SESSION
@@ -62,8 +80,8 @@ def create_checkout_session():
                 "quantity": 1,
             }
         ],
-        success_url="https://www.warszawskieceny.pl/success.html?session_id={CHECKOUT_SESSION_ID}",
-        cancel_url="https://www.warszawskieceny.pl/predykcja.html",
+        success_url="http://localhost:8080/success.html?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url="http://localhost:8080/predykcja.html",
         metadata={
             "ulica": data.get("ulica"),
             "numer": data.get("numer"),
@@ -90,16 +108,19 @@ def webhook():
     except Exception as e:
         return str(e), 400
 
-    # PAYMENT SUCCESS
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         session_id = session["id"]
 
-        supabase.table("payments").upsert({
-            "id": session_id,
-            "paid": True,
-            "used": False
-        }).execute()
+        payment = Payment(
+            id=session_id,
+            paid=True,
+            used=False,
+            created_at=datetime.utcnow()
+        )
+
+        db.session.merge(payment)
+        db.session.commit()
 
         print("PAYMENT SAVED:", session_id)
 
@@ -107,11 +128,13 @@ def webhook():
 
 
 # =========================
-# PREDICTION (PROTECTED)
+# LIMITER
 # =========================
-
 limiter = Limiter(get_remote_address, app=app)
 
+# =========================
+# PREDICTION
+# =========================
 @app.route("/predict", methods=["POST"])
 @limiter.limit("7 per 10 seconds")
 def predict():
@@ -121,36 +144,30 @@ def predict():
     if not session_id:
         return jsonify({"error": "Brak session_id"}), 400
 
-    # CHECK SUPABASE
-    res = supabase.table("payments").select("*").eq("id", session_id).execute()
+    payment = Payment.query.filter_by(id=session_id).first()
 
-    if len(res.data) == 0:
+    if not payment:
         return jsonify({"error": "Brak płatności"}), 403
 
-    payment = res.data[0]
-
-    if not payment["paid"]:
+    if not payment.paid:
         return jsonify({"error": "Nieopłacone"}), 402
 
     now = datetime.now(timezone.utc)
 
-    if not payment["used"]:
-        supabase.table("payments").update({
-            "used": True,
-            "expires_at": (now + timedelta(hours=1)).isoformat()
-        }).eq("id", session_id).execute()
+    if not payment.used:
+        payment.used = True
+        payment.expires_at = now + timedelta(hours=1)
+        db.session.commit()
     else:
-        expires_at = payment.get("expires_at")
-
-        if not expires_at:
+        if not payment.expires_at:
             return jsonify({"error": "Błąd danych"}), 500
 
-        expires_at_dt = datetime.fromisoformat(expires_at)
+        expires_at = payment.expires_at
 
-        if expires_at_dt.tzinfo is None:
-            expires_at_dt = expires_at_dt.replace(tzinfo=timezone.utc)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
 
-        if now > expires_at_dt:
+        if now > expires_at:
             return jsonify({"error": "Dostęp wygasł"}), 403
 
     # =========================
@@ -198,8 +215,6 @@ def predict():
         if ulica_csv:
             zf.writestr("dane z ulicy.csv", ulica_csv.getvalue())
 
-
-
         zf.writestr("dane z okolicy.csv", okolica_csv.getvalue())
 
     zip_buffer.seek(0)
@@ -210,6 +225,7 @@ def predict():
         as_attachment=True,
         download_name="wyniki.zip"
     )
+
 
 @app.route("/ping", methods=["GET"])
 @limiter.limit("3 per 4 minutes")
