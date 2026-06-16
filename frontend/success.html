@@ -61,9 +61,10 @@ async function runPrediction() {
     }, 600);
 
     for (let i = 0; i < maxRetries; i++) {
+        const token = localStorage.getItem("token");
         response = await fetch("http://localhost:10000/predict", {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
+            headers: {"Content-Type": "application/json", "Authorization": `Bearer ${token}`},
             body: JSON.stringify(data)
         });
 

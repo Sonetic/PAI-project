@@ -70,10 +70,27 @@ class Payment(db.Model):
     __tablename__ = "payments"
 
     id = db.Column(db.String, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.user_id"),
+        nullable=False
+    )
     paid = db.Column(db.Boolean, default=False)
     used = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=True)
+
+class Prediction(db.Model):
+    __tablename__ = "predictions"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"))
+    ulica = db.Column(db.String(255), nullable=False)
+    numer = db.Column(db.String(50), nullable=False)
+    predicted_price = db.Column(db.String(50), nullable=False)
+
+    payment_id = db.Column(db.String, db.ForeignKey("payments.id"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 with app.app_context():
@@ -154,6 +171,7 @@ def create_checkout_session():
         success_url="http://localhost:8080/success.html?session_id={CHECKOUT_SESSION_ID}",
         cancel_url="http://localhost:8080/predykcja.html",
         metadata={
+            "user_id": str(user_id),
             "ulica": data.get("ulica"),
             "numer": data.get("numer"),
         }
@@ -182,9 +200,11 @@ def webhook():
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         session_id = session["id"]
+        user_id = int(session["metadata"]["user_id"])
 
         payment = Payment(
             id=session_id,
+            user_id=user_id,
             paid=True,
             used=False,
             created_at=datetime.utcnow()
@@ -207,6 +227,7 @@ limiter = Limiter(get_remote_address, app=app)
 # PREDICTION
 # =========================
 @app.route("/predict", methods=["POST"])
+@jwt_required()
 @limiter.limit("7 per 10 seconds")
 def predict():
     data = request.get_json()
@@ -251,6 +272,20 @@ def predict():
         data["pietro"],
         data["liczba_pokoi"]
     )
+    predicted_price = result[0]["przewidywana cena za m2"]
+
+
+    prediction = Prediction(
+        user_id=int(get_jwt_identity()),
+        payment_id=session_id,
+        ulica=data["ulica"],
+        numer=data["numer"],
+        predicted_price=predicted_price
+
+    )
+
+    db.session.add(prediction)
+    db.session.commit()
 
     # =========================
     # CSV OUTPUT
