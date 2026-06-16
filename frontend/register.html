@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Rejestracja - Analiza mieszkań</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<div class="form-box">
+    <h2>Utwórz konto</h2>
+
+    <div class="form-row">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" placeholder="twoj@email.com" required>
+    </div>
+
+    <div class="form-row">
+        <label for="password">Hasło</label>
+        <input id="password" type="password" placeholder="Min. 6 znaków" required>
+    </div>
+
+    <button onclick="handleRegister()">Zarejestruj się</button>
+
+    <p style="margin-top: 15px; text-align: center; font-size: 14px;">
+        Masz już konto? <a href="login.html">Zaloguj się</a>
+    </p>
+</div>
+
+<script>
+async function handleRegister() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    if (!email || !password) {
+        alert("Proszę uzupełnić wszystkie pola.");
+        return;
+    }
+
+    try {
+        const response = await fetch("http://localhost:10000/register", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            // Backend zwraca np. {"error": "Użytkownik istnieje"}
+            alert(data.error || "Błąd rejestracji");
+            return;
+        }
+
+        // Sukces konta
+        alert("Konto utworzone pomyślnie! Teraz możesz się zalogować.");
+        window.location.href = "login.html";
+
+    } catch (error) {
+        console.error("Błąd połączenia:", error);
+        alert("Nie udało się połączyć z serwerem API.");
+    }
+}
+</script>
+
+</body>
+</html>

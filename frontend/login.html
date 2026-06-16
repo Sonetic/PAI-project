@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Logowanie - Analiza mieszkań</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<div class="form-box">
+    <h2>Zaloguj się</h2>
+
+    <div class="form-row">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" placeholder="twoj@email.com" required>
+    </div>
+
+    <div class="form-row">
+        <label for="password">Hasło</label>
+        <input id="password" type="password" placeholder="••••••••" required>
+    </div>
+
+    <button onclick="handleLogin()">Zaloguj się</button>
+
+    <p style="margin-top: 15px; text-align: center; font-size: 14px;">
+        Nie masz konta? <a href="register.html">Zarejestruj się</a>
+    </p>
+</div>
+
+<script>
+async function handleLogin() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    if (!email || !password) {
+        alert("Proszę uzupełnić wszystkie pola.");
+        return;
+    }
+
+    try {
+        const response = await fetch("http://localhost:10000/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            // Backend zwraca np. {"error": "Nieprawidłowe hasło"}
+            alert(data.error || "Błąd logowania");
+            return;
+        }
+
+        // ZAPIS DO LOCALSTORAGE (Kluczowe dla prawidłowego działania płatności)
+        if (data.token && data.user_id) {
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("user_id", data.user_id);
+
+            // Przekierowanie na stronę z formularzem wyceny mieszkania
+            window.location.href = "predykcja.html";
+        } else {
+            alert("Błąd: Serwer nie zwrócił kompletnych danych sesji. Upewnij się, że zaktualizowałeś endpoint /login na backendzie.");
+        }
+
+    } catch (error) {
+        console.error("Błąd połączenia:", error);
+        alert("Nie udało się połączyć z serwerem API.");
+    }
+}
+</script>
+
+</body>
+</html>

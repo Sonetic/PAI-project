@@ -11,11 +11,21 @@ from predykcja import predict_price
 from datetime import datetime, timedelta, timezone
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_jwt_extended import JWTManager
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from dotenv import load_dotenv
+load_dotenv()
+
 
 # =========================
 # APP
 # =========================
 app = Flask(__name__)
+
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+jwt = JWTManager(app)
 
 CORS(
     app,
@@ -23,6 +33,8 @@ CORS(
         "http://localhost:8080"
     ]}}
 )
+
+
 
 # =========================
 # ENV
@@ -45,6 +57,15 @@ PRICE = 200  # grosze
 # =========================
 # MODEL
 # =========================
+
+class User(db.Model):
+    __tablename__ = "users"
+
+    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+
+
 class Payment(db.Model):
     __tablename__ = "payments"
 
@@ -58,12 +79,62 @@ class Payment(db.Model):
 with app.app_context():
     db.create_all()
 
+
+@app.route("/register", methods=["POST"])
+def register():
+    data = request.get_json()
+
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"error": "Brak danych"}), 400
+
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+        return jsonify({"error": "Użytkownik istnieje"}), 409
+
+    hashed_password = generate_password_hash(password)
+
+    user = User(email=email, password=hashed_password)
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({"message": "Konto utworzone"}), 201
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"error": "Brak danych"}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    if not user or not check_password_hash(user.password, password):
+        return jsonify({"error": "Nieprawidłowe dane"}), 401
+
+    token = create_access_token(identity=str(user.user_id))
+    print("LOGIN SUCCESS:", user.user_id, flush=True)
+    print("TOKEN:", token, flush=True)
+
+    return jsonify({
+        "token": token,
+        "user_id": user.user_id
+    }), 200
+
 # =========================
 # CREATE PAYMENT SESSION
 # =========================
 @app.route("/create-checkout-session", methods=["POST"])
+@jwt_required()
 def create_checkout_session():
     data = request.get_json()
+    print("JWT KEY:", app.config["JWT_SECRET_KEY"], flush=True)
+    user_id = get_jwt_identity()
+    print("USER:", user_id)
 
     session = stripe.checkout.Session.create(
         mode="payment",
@@ -231,6 +302,7 @@ def predict():
 @limiter.limit("3 per 4 minutes")
 def ping():
     return jsonify({"status": "alive"}), 200
+
 
 
 # =========================
