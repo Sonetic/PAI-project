@@ -14,9 +14,4 @@ gunicorn==21.2.0
 psycopg2-binary
 flask-jwt-extended
 dotenv
-
-
-
-
-
-
+Flask-Migrate==4.0.4

@@ -7,6 +7,8 @@ import stripe
 from flask_sqlalchemy import SQLAlchemy
 import os
 import sys
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
 from predykcja import predict_price
 from datetime import datetime, timedelta, timezone
 from flask_limiter import Limiter
@@ -19,9 +21,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-# =========================
-# APP
-# =========================
 app = Flask(__name__)
 
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
@@ -36,9 +35,7 @@ CORS(
 
 
 
-# =========================
-# ENV
-# =========================
+
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
@@ -54,9 +51,7 @@ db = SQLAlchemy(app)
 
 PRICE = 200  # grosze
 
-# =========================
-# MODEL
-# =========================
+# db
 
 class User(db.Model):
     __tablename__ = "users"
@@ -93,8 +88,6 @@ class Prediction(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-with app.app_context():
-    db.create_all()
 
 
 @app.route("/register", methods=["POST"])
@@ -142,9 +135,7 @@ def login():
         "user_id": user.user_id
     }), 200
 
-# =========================
 # CREATE PAYMENT SESSION
-# =========================
 @app.route("/create-checkout-session", methods=["POST"])
 @jwt_required()
 def create_checkout_session():
