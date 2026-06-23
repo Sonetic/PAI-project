@@ -29,6 +29,12 @@
 </div>
 
 <script>
+const token = localStorage.getItem("token");
+
+if (token) {
+    alert("Jesteś już zalogowany.");
+    window.location.href = "predykcja.html";
+}
 async function handleLogin() {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
