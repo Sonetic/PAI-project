@@ -15,6 +15,7 @@ psycopg2-binary
 flask-jwt-extended
 dotenv
 Flask-Migrate==4.0.4
+redis
 
 
 

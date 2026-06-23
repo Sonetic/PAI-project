@@ -19,6 +19,11 @@ from flask_jwt_extended import create_access_token
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from dotenv import load_dotenv
 load_dotenv()
+import time
+import json
+import hashlib
+import redis
+
 
 
 app = Flask(__name__)
@@ -216,6 +221,22 @@ def webhook():
 # =========================
 limiter = Limiter(get_remote_address, app=app)
 
+
+
+# =========================
+# REDIS
+# =========================
+def make_cache_key(data: dict):
+    raw = json.dumps(data, sort_keys=True)
+    return hashlib.md5(raw.encode()).hexdigest()
+
+r = redis.Redis(
+    host=os.getenv("REDIS_HOST", "redis"),
+    port=6379,
+    decode_responses=True
+)
+
+
 # =========================
 # PREDICTION
 # =========================
@@ -223,7 +244,14 @@ limiter = Limiter(get_remote_address, app=app)
 @jwt_required()
 @limiter.limit("7 per 10 seconds")
 def predict():
+    start_time = time.time()
     data = request.get_json()
+    print("DATA:", data, flush=True)
+    print("KEY:", make_cache_key({
+        k: data[k]
+        for k in ["ulica", "numer", "powierzchnia", "pietro", "liczba_pokoi"]
+    }), flush=True)
+
     session_id = data.get("session_id")
 
     if not session_id:
@@ -255,6 +283,20 @@ def predict():
         if now > expires_at:
             return jsonify({"error": "Dostęp wygasł"}), 403
 
+    cache_key = make_cache_key({
+        k: data[k]
+        for k in ["ulica", "numer", "powierzchnia", "pietro", "liczba_pokoi"]
+    })
+    cached = r.get(cache_key)
+
+    if cached:
+        print("CACHE HIT:", cache_key, flush=True)
+        print("TIME:", time.time() - start_time, flush=True)
+
+        return jsonify(json.loads(cached))
+
+    print("CACHE MISS:", cache_key, flush=True)
+
     # =========================
     # ML LOGIC
     # =========================
@@ -279,6 +321,19 @@ def predict():
 
     db.session.add(prediction)
     db.session.commit()
+
+    cache_data = [
+        result[0],
+        result[1].to_dict(orient="records"),
+    ]
+
+    r.setex(
+        cache_key,
+        3600,
+        json.dumps(cache_data)
+    )
+
+    print("TIME:", time.time() - start_time, flush=True)
 
     # =========================
     # CSV OUTPUT
