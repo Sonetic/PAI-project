@@ -168,7 +168,9 @@ def create_checkout_session():
         }
     )
 
-    return jsonify({"url": session.url})
+    return jsonify({"url": session.url,
+                    "session_id": session.id
+                    })
 
 
 # =========================

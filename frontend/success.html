@@ -38,7 +38,7 @@ async function runPrediction() {
     document.getElementById("loader").style.display = "block";
     document.getElementById("progress").style.width = "0%";
     document.getElementById("loaderText").innerText = "Analizujemy dane...";
-    await new Promise(r => setTimeout(r, 8000));
+    await new Promise(r => setTimeout(r, 1000));
 
     const session_id = new URLSearchParams(window.location.search)
         .get("session_id");
