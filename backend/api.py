@@ -23,6 +23,12 @@ import time
 import json
 import hashlib
 import redis
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
 
 
 
@@ -114,6 +120,10 @@ def register():
     user = User(email=email, password=hashed_password)
     db.session.add(user)
     db.session.commit()
+    logging.info({
+        "event": "registration success",
+        "user_id": user.user_id
+    })
 
     return jsonify({"message": "Konto utworzone"}), 201
 
@@ -134,6 +144,14 @@ def login():
     token = create_access_token(identity=str(user.user_id))
     print("LOGIN SUCCESS:", user.user_id, flush=True)
     print("TOKEN:", token, flush=True)
+    logging.info({
+        "event": "login_success",
+        "user_id": user.user_id
+    })
+    logging.info({
+        "event": "token",
+        "num": token
+    })
 
     return jsonify({
         "token": token,
@@ -145,9 +163,13 @@ def login():
 @jwt_required()
 def create_checkout_session():
     data = request.get_json()
-    print("JWT KEY:", app.config["JWT_SECRET_KEY"], flush=True)
     user_id = get_jwt_identity()
-    print("USER:", user_id)
+
+    logging.info({
+        "event": "create_checkout_session",
+        "jwt_key": app.config["JWT_SECRET_KEY"],
+        "user_id": user_id
+    })
 
     session = stripe.checkout.Session.create(
         mode="payment",
@@ -211,7 +233,11 @@ def webhook():
         db.session.merge(payment)
         db.session.commit()
 
-        print("PAYMENT SAVED:", session_id)
+        logging.info({
+            "event": "payment_saved",
+            "session_id": session_id,
+            "user_id": user_id
+        })
 
     return "ok", 200
 
@@ -233,7 +259,7 @@ def make_cache_key(data: dict):
 r = redis.Redis(
     host=os.getenv("REDIS_HOST", "redis"),
     port=6379,
-    decode_responses=True
+    decode_responses=False
 )
 
 
@@ -246,11 +272,17 @@ r = redis.Redis(
 def predict():
     start_time = time.time()
     data = request.get_json()
-    print("DATA:", data, flush=True)
-    print("KEY:", make_cache_key({
-        k: data[k]
-        for k in ["ulica", "numer", "powierzchnia", "pietro", "liczba_pokoi"]
-    }), flush=True)
+    logging.info({
+        "event": "predict_request",
+        "data": data
+    })
+
+    logging.info({
+        "event": "cache_key",
+        "key": make_cache_key({
+            k: data[k] for k in ["ulica", "numer", "powierzchnia", "pietro", "liczba_pokoi"]
+        })
+    })
 
     session_id = data.get("session_id")
 
@@ -290,13 +322,23 @@ def predict():
     cached = r.get(cache_key)
 
     if cached:
-        print("CACHE HIT:", cache_key, flush=True)
-        print("TIME:", time.time() - start_time, flush=True)
+        logging.info({
+            "event": "cache_hit",
+            "key": cache_key,
+            "time": time.time() - start_time
+        })
 
-        return jsonify(json.loads(cached))
+        return send_file(
+            io.BytesIO(cached),
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name="wyniki.zip"
+        )
 
-    print("CACHE MISS:", cache_key, flush=True)
-
+    logging.info({
+        "event": "cache_miss",
+        "key": cache_key
+    })
     # =========================
     # ML LOGIC
     # =========================
@@ -322,19 +364,12 @@ def predict():
     db.session.add(prediction)
     db.session.commit()
 
-    cache_data = [
-        result[0],
-        result[1].to_dict(orient="records"),
-    ]
 
-    r.setex(
-        cache_key,
-        3600,
-        json.dumps(cache_data)
-    )
 
-    print("TIME:", time.time() - start_time, flush=True)
-
+    logging.info({
+        "event": "prediction_time",
+        "time": time.time() - start_time
+    })
     # =========================
     # CSV OUTPUT
     # =========================
@@ -372,6 +407,14 @@ def predict():
         zf.writestr("dane z okolicy.csv", okolica_csv.getvalue())
 
     zip_buffer.seek(0)
+
+    zip_bytes = zip_buffer.getvalue()
+
+    r.set(
+        cache_key,
+        zip_bytes,
+        ex=3600
+    )
 
     return send_file(
         zip_buffer,
