@@ -328,6 +328,17 @@ def predict():
             "time": time.time() - start_time
         })
 
+        prediction = Prediction(
+            user_id=int(get_jwt_identity()),
+            payment_id=session_id,
+            ulica=data["ulica"],
+            numer=data["numer"],
+            predicted_price="CACHED"
+        )
+
+        db.session.add(prediction)
+        db.session.commit()
+
         return send_file(
             io.BytesIO(cached),
             mimetype="application/zip",
