@@ -19,7 +19,3 @@ Database migrations (Flask-Migrate / Alembic)
 
    flask db upgrade
 
-Notes:
-- The project previously used db.create_all(); that's removed. Use migrations to evolve the schema.
-- DATABASE_URL env var is read in backend/api.py; ensure it points to your Postgres instance.
-- To generate subsequent migrations after model changes: repeat `flask db migrate -m "msg"` then `flask db upgrade`.

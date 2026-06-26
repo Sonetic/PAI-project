@@ -62,7 +62,8 @@ db = SQLAlchemy(app)
 
 PRICE = 200  # grosze
 
-# db
+# DATABASE
+
 
 class User(db.Model):
     __tablename__ = "users"
@@ -200,9 +201,9 @@ def create_checkout_session():
                     })
 
 
-# =========================
+
 # STRIPE WEBHOOK
-# =========================
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     payload = request.data
@@ -242,16 +243,15 @@ def webhook():
     return "ok", 200
 
 
-# =========================
+
 # LIMITER
-# =========================
 limiter = Limiter(get_remote_address, app=app)
 
 
 
-# =========================
+
 # REDIS
-# =========================
+
 def make_cache_key(data: dict):
     raw = json.dumps(data, sort_keys=True)
     return hashlib.md5(raw.encode()).hexdigest()
@@ -262,10 +262,8 @@ r = redis.Redis(
     decode_responses=False
 )
 
-
-# =========================
 # PREDICTION
-# =========================
+
 @app.route("/predict", methods=["POST"])
 @jwt_required()
 @limiter.limit("7 per 10 seconds")
@@ -350,9 +348,7 @@ def predict():
         "event": "cache_miss",
         "key": cache_key
     })
-    # =========================
     # ML LOGIC
-    # =========================
     result = predict_price(
         data["ulica"],
         data["numer"],
@@ -381,9 +377,9 @@ def predict():
         "event": "prediction_time",
         "time": time.time() - start_time
     })
-    # =========================
+
     # CSV OUTPUT
-    # =========================
+
     pred_csv = io.StringIO()
     pd.DataFrame([result[0]]).to_csv(pred_csv, index=False)
 
@@ -401,9 +397,9 @@ def predict():
         budynek_csv = io.StringIO()
         result[3].to_csv(budynek_csv, index=False)
 
-    # =========================
+
     # ZIP RESPONSE
-    # =========================
+
     zip_buffer = io.BytesIO()
 
     with zipfile.ZipFile(zip_buffer, "w") as zf:
@@ -442,9 +438,7 @@ def ping():
 
 
 
-# =========================
-# START
-# =========================
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)

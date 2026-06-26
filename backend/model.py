@@ -13,7 +13,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 
 
-# ===== 1. wczytanie =====
+# wczytanie
 df = pd.read_csv(os.path.join(BASE_DIR, "transactions_ready.csv"))
 df["inv_powierzchnia"] = 1/df["powierzchnia_uzyt"]
 df["relacja_ulica"] = df["srednia_budynek"] / df["srednia_cena_dzielnica"]
@@ -51,7 +51,7 @@ target = "cena_za_m2"
 X = df[features]
 y = df[target]
 
-# ===== 2. podział na percentyle =====
+# podzial na percentyle
 threshold = np.percentile(y, 98)
 
 mask_normal = y <= threshold
@@ -62,7 +62,7 @@ X_out, y_out = X[mask_outliers], y[mask_outliers]
 
 #print(f"Normal: {len(X_normal)}, Outliers: {len(X_out)}")
 
-# ===== 3. split =====
+#split
 Xn_train, Xn_test, yn_train, yn_test = train_test_split(
     X_normal, y_normal, test_size=0.2, random_state=42
 )
@@ -71,7 +71,7 @@ Xo_train, Xo_test, yo_train, yo_test = train_test_split(
     X_out, y_out, test_size=0.2, random_state=42
 )
 
-# ===== 4. modele =====
+#modele
 model_normal = Pipeline([
     ("imputer", SimpleImputer(strategy="median")),
     ("scaler", StandardScaler()),
@@ -83,11 +83,11 @@ model_out = Pipeline([
     ("model", GradientBoostingRegressor(n_estimators=600, max_depth=3, learning_rate=0.01))
 ])
 
-# ===== 5. trening =====
+#trening
 model_normal.fit(Xn_train, yn_train)
 model_out.fit(Xo_train, yo_train)
 
-# ===== 6. predykcja =====
+# predykcja
 yn_pred = model_normal.predict(Xn_test)
 yo_pred = model_out.predict(Xo_test)
 
@@ -95,7 +95,7 @@ yo_pred = model_out.predict(Xo_test)
 yn_pred_train = model_normal.predict(Xn_train)
 yo_pred_train = model_out.predict(Xo_train)
 
-# ===== 7. metryki =====
+# metryki
 def mape(y_true, y_pred):
     errors = np.abs(y_true - y_pred) / y_pred * 100
 
@@ -198,7 +198,7 @@ przewazajacaFunkcjaBudynku_num: -57.43
 '''
 
 
-# ===== 8. filtr 2025 =====
+#  filtr 2025
 df_2025 = df[df['rok'] == 2025]
 
 X_2025 = df_2025[features]

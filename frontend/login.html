@@ -61,7 +61,7 @@ async function handleLogin() {
             return;
         }
 
-        // ZAPIS DO LOCALSTORAGE (Kluczowe dla prawidłowego działania płatności)
+        // ZAPIS DO LOCALSTORAGE Kluczowe dla prawidłowego działania płatności
         if (data.token && data.user_id) {
             localStorage.setItem("token", data.token);
             localStorage.setItem("user_id", data.user_id);
