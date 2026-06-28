@@ -56,17 +56,14 @@ async function handleLogin() {
         const data = await response.json();
 
         if (!response.ok) {
-            // Backend zwraca np. {"error": "Nieprawidłowe hasło"}
             alert(data.error || "Błąd logowania");
             return;
         }
 
-        // ZAPIS DO LOCALSTORAGE Kluczowe dla prawidłowego działania płatności
         if (data.token && data.user_id) {
             localStorage.setItem("token", data.token);
             localStorage.setItem("user_id", data.user_id);
 
-            // Przekierowanie na stronę z formularzem wyceny mieszkania
             window.location.href = "predykcja.html";
         } else {
             alert("Błąd: Serwer nie zwrócił kompletnych danych sesji. Upewnij się, że zaktualizowałeś endpoint /login na backendzie.");

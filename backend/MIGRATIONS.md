@@ -1,12 +1,12 @@
-Database migrations (Flask-Migrate / Alembic)
+database migrations 
 
-1. Install dependencies
+1. install dependencies
 
    python -m venv .venv
    source .venv/bin/activate
    pip install -r backend/requirements.txt
 
-2. Initialize migrations (one-time)
+2. initialize migrations (one-time)
 
    export FLASK_APP=backend.manage
    flask db init
